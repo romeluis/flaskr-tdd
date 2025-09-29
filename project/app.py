@@ -90,11 +90,9 @@ def logout():
 
 @app.route("/search/", methods=["GET"])
 def search():
-    query = request.args.get("query")
+    query = request.args.get("query", "")
     entries = db.session.query(models.Post)
-    if query:
-        return render_template("search.html", entries=entries, query=query)
-    return render_template("search.html")
+    return render_template("search.html", entries=entries, query=query)
 
 
 def login_required(f):

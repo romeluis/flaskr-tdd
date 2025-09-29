@@ -86,3 +86,64 @@ def test_delete_message(client):
     rv = client.get("/delete/1")
     data = json.loads(rv.data)
     assert data["status"] == 1
+
+
+def test_delete_requires_login(client):
+    """Ensure deleting a post requires the user to be logged in"""
+    rv = client.get("/delete/1")
+    data = json.loads(rv.data)
+    assert data["status"] == 0
+
+    # Log in
+    login(client, app.config["USERNAME"], app.config["PASSWORD"])
+
+    rv = client.get("/delete/1")
+    data = json.loads(rv.data)
+
+    assert data["status"] == 1
+    assert data["message"] == "Post Deleted"
+
+def test_search(client):
+    """Ensure that the search functionality works"""
+    # First, log in and add some test posts
+    login(client, app.config["USERNAME"], app.config["PASSWORD"])
+    
+    # Add test posts
+    client.post(
+        "/add",
+        data=dict(title="Python Programming", text="Learn Python basics"),
+        follow_redirects=True,
+    )
+    client.post(
+        "/add", 
+        data=dict(title="Flask Framework", text="Web development with Python"),
+        follow_redirects=True,
+    )
+    client.post(
+        "/add",
+        data=dict(title="JavaScript Guide", text="Frontend programming tutorial"),
+        follow_redirects=True,
+    )
+    
+    # Test search without query parameter - should show all posts
+    rv = client.get("/search/")
+    assert rv.status_code == 200
+    assert b"Python Programming" in rv.data
+    assert b"Flask Framework" in rv.data
+    assert b"JavaScript Guide" in rv.data
+    
+    # Test search with query that matches title and text - client-side filtering
+    rv = client.get("/search/?query=Python")
+    assert rv.status_code == 200
+    # Should show entries that contain "Python" in title or text
+    assert b"Python Programming" in rv.data  # Contains "Python" in title
+    assert b"Flask Framework" in rv.data  # Contains "Python" in text
+    assert b"JavaScript Guide" not in rv.data  # Doesn't contain "Python"
+    
+    # Test search with query that matches text only
+    rv = client.get("/search/?query=tutorial")
+    assert rv.status_code == 200
+    assert b"JavaScript Guide" in rv.data  # Contains "tutorial" in text
+    assert b"Python Programming" not in rv.data  # Doesn't contain "tutorial"
+    assert b"Flask Framework" not in rv.data  # Doesn't contain "tutorial"
+    
